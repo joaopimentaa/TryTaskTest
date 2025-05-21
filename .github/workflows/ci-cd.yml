@@ -16,22 +16,22 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v3
 
-      # 2) Configura JDK 11 (sem cache de Ant)
+      # 2) Configura JDK 11
       - name: Configurar JDK 11
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '11'
 
-      # 3) Cria (ou limpa) o diretório lib/
+      # 3) Cria o diretório lib/ (caso não exista)
       - name: Criar diretório lib/
-        run: |
-          mkdir -p lib
+        run: mkdir -p lib
 
-      # 4) Baixa o driver PostgreSQL JDBC para lib/
+      # 4) Baixa o driver JDBC do PostgreSQL para lib/
       - name: Baixar driver PostgreSQL JDBC
         run: |
-          wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar -O lib/postgresql-42.7.3.jar
+          wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar \
+               -O lib/postgresql-42.7.3.jar
 
       # 5) Baixa o JUnit Platform Console Standalone para lib/
       - name: Baixar JUnit Platform Console Standalone
@@ -39,15 +39,15 @@ jobs:
           wget https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.2/junit-platform-console-standalone-1.9.2.jar \
                -O lib/junit-platform-console-standalone-1.9.2.jar
 
-      # 6) Exibe a versão do Ant (já instalado no ubuntu-latest)
+      # 6) Verifica a versão do Ant (já vem instalado no ubuntu-latest)
       - name: Verificar versão do Ant
         run: ant -version
 
-      # 7) Executa Ant na target “test” (compila e roda todos os testes)
+      # 7) Executa Ant na target “test” (compile + testes)
       - name: Executar Ant → test
         run: ant test
 
-      # 8) (Opcional) Para gerar o JAR final, descomente abaixo:
+      # 8) (Opcional) Para gerar o JAR final, descomente:
       # - name: Empacotar JAR final
       #   run: ant jar
 

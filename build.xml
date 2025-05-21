@@ -2,24 +2,22 @@
 <project name="TryTasks" default="test" basedir=".">
     <!-- ==================================================
          PROPRIEDADES GERAIS
-
-         src.dir           → código-fonte principal (Java)
-         test.src.dir      → código-fonte de testes
-         build.classes.dir → saída das classes compiladas (produção)
-         build.test.dir    → saída das classes compiladas (testes)
-         lib.dir           → diretório de bibliotecas (JARs)
-         dist.dir          → diretório de distribuição (JAR final)
+         --------------------------------------------------
+         src.dir           → aqui fica TODO o código-fonte (.java).
+                             No GitHub, as .java estão diretamente em src/.
+         build.classes.dir → saída das classes compiladas (produção e testes juntos)
+         lib.dir           → diretório de bibliotecas (JARs: driver Postgres + JUnit)
+         dist.dir          → diretório de distribuição (JAR final do app)
          ================================================== -->
-    <property name="src.dir"           location="src/main/java"/>
-    <property name="test.src.dir"      location="src/test/java"/>
+    <property name="src.dir"           location="src"/>
     <property name="build.classes.dir" location="build/classes"/>
-    <property name="build.test.dir"    location="build/test-classes"/>
     <property name="lib.dir"           location="lib"/>
     <property name="dist.dir"          location="dist"/>
 
     <!-- ==================================================
          CONFIGURAÇÃO DE CLASSPATH:
          Inclui TODOS os JARs dentro de lib/ no classpath
+         ( driver-postgres + junit-platform-console-standalone )
          ================================================== -->
     <path id="project.class.path">
         <fileset dir="${lib.dir}">
@@ -28,22 +26,22 @@
     </path>
 
     <!-- ==================================================
-         TARGET “init” → Cria pastas de saída (caso não existam)
+         TARGET “init” → Cria pastas de saída (se ainda não existirem)
          ================================================== -->
     <target name="init">
         <mkdir dir="${build.classes.dir}"/>
-        <mkdir dir="${build.test.dir}"/>
         <mkdir dir="${dist.dir}"/>
     </target>
 
     <!-- ==================================================
-         TARGET “compile” → Compila o código principal
-
-         - Fonte: src/main/java
-         - Destino: build/classes
-         - Classpath: lib/*.jar (inclui driver Postgres e JUnit, caso estejam em lib/)
+         TARGET “compile” → Compila TODO o código encontrado em src/
+         --------------------------------------------------
+         - Fonte:             src/
+         - Destino:           build/classes
+         - Classpath:         lib/**/*.jar (driver + JUnit)
          ================================================== -->
     <target name="compile" depends="init">
+        <echo message="Compilando todo o código encontrado em src/ ..."/>
         <javac srcdir="${src.dir}"
                destdir="${build.classes.dir}"
                includeantruntime="false"
@@ -52,49 +50,27 @@
     </target>
 
     <!-- ==================================================
-         TARGET “compile-tests” → Compila o código de testes
-
-         - Fonte: src/test/java
-         - Destino: build/test-classes
-         - Classpath: build/classes + lib/*.jar
-         ================================================== -->
-    <target name="compile-tests" depends="compile">
-        <javac srcdir="${test.src.dir}"
-               destdir="${build.test.dir}"
-               includeantruntime="false">
-            <classpath>
-                <!-- inclui as classes já compiladas do projeto -->
-                <pathelement location="${build.classes.dir}"/>
-                <!-- inclui todos os JARs de lib/ (driver e JUnit) -->
-                <path refid="project.class.path"/>
-            </classpath>
-            <compilerarg line="--release 11"/>
-        </javac>
-    </target>
-
-    <!-- ==================================================
-         TARGET “test” → Executa os testes JUnit 5 (via Console Standalone)
-
-         Pré-requisitos:
-          1) Você já possui o JAR “postgresql-42.7.3.jar” em lib/.
-          2) Tenha em lib/ também o JAR “junit-platform-console-standalone-1.9.2.jar”.
+         TARGET “test” → Executa testes JUnit 5 via Console Standalone
+         --------------------------------------------------
+         Pré-requisitos (em lib/):
+           • postgresql-42.7.3.jar
+           • junit-platform-console-standalone-1.9.2.jar
          Como funciona:
-          - O Ant chama o JUnit Platform Console, apontando para:
-             • classes “build/classes”
-             • classes de teste “build/test-classes”
-             • TODOS os JARs de lib/ no classpath
+           1) Depende de compile (já compilou tudo em build/classes)
+           2) Roda “java -jar junit-platform-console-standalone-1.9.2.jar”
+              apontando para (build/classes + lib/*.jar) no classpath
+           3) O console JUnit busca todas as classes cujo nome termine em *Test
          ================================================== -->
-    <target name="test" depends="compile-tests">
-        <echo message="Executando testes JUnit 5 via Console Standalone..."/>
+    <target name="test" depends="compile">
+        <echo message="Executando testes JUnit 5 (Console Standalone) ..."/>
 
-        <!-- Monta a string de classpath: build/classes:build/test-classes:lib/* -->
+        <!-- Monta a string de classpath: build/classes + todos os JARs de lib/ -->
         <path id="runtime.test.classpath">
             <pathelement location="${build.classes.dir}"/>
-            <pathelement location="${build.test.dir}"/>
             <path refid="project.class.path"/>
         </path>
 
-        <!-- Executa o JUnit Platform Console Standalone -->
+        <!-- Chama o JUnit Platform Console Standalone -->
         <java jar="${lib.dir}/junit-platform-console-standalone-1.9.2.jar"
               fork="true"
               failonerror="true">
@@ -103,29 +79,27 @@
     </target>
 
     <!-- ==================================================
-         TARGET “jar” → Empacota o JAR final do aplicativo
-
+         TARGET “jar” → Empacota o JAR final do aplicativo (opcional)
+         --------------------------------------------------
          - Inclui todas as classes compiladas (build/classes)
-         - Adiciona “Main-Class” no manifesto
+         - Adiciona “Main-Class” no manifesto (ajuste se for outro pacote)
          - Saída: dist/TryTasks.jar
          ================================================== -->
     <target name="jar" depends="compile">
-        <echo message="Gerando JAR de distribuição..."/>
-        <jar destfile="${dist.dir}/TryTasks.jar"
-             basedir="${build.classes.dir}">
+        <echo message="Gerando JAR de distribuição em dist/TryTasks.jar ..."/>
+        <jar destfile="${dist.dir}/TryTasks.jar" basedir="${build.classes.dir}">
             <manifest>
-                <!-- Ajuste para a sua classe principal, se diferente -->
+                <!-- Ajuste esta classe principal se for diferente -->
                 <attribute name="Main-Class" value="com.example.trytasks.TryTasks"/>
             </manifest>
         </jar>
     </target>
 
     <!-- ==================================================
-         TARGET “clean” → Limpa todos os diretórios de build e distribuição
+         TARGET “clean” → Limpa diretórios de build e distribuição
          ================================================== -->
     <target name="clean">
         <delete dir="${build.classes.dir}"/>
-        <delete dir="${build.test.dir}"/>
         <delete dir="${dist.dir}"/>
     </target>
 </project>
