@@ -18,6 +18,9 @@ public class DbManager {
 
     public DbManager() {
         try {
+            // 🔽 Força o carregamento do driver PostgreSQL
+            Class.forName("org.postgresql.Driver");
+
             String url = "jdbc:postgresql://aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
                     + "?user=postgres.hpwsyhmalwkmeuqdqcpm"
                     + "&password=FasoftTryTasks"
@@ -25,6 +28,9 @@ public class DbManager {
 
             connection = DriverManager.getConnection(url);
             System.out.println("Conectado ao Supabase!");
+        } catch (ClassNotFoundException e) {
+            System.err.println("Driver PostgreSQL não encontrado:");
+            e.printStackTrace();
         } catch (SQLException e) {
             System.err.println("Erro de conexão:");
             e.printStackTrace();
@@ -40,11 +46,10 @@ public class DbManager {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     tasks.put(rs.getInt(1), rs.getString(2));
-                    //printTasks(rs);
                 }
             } catch (SQLException e) {
-            System.err.println("Não foi possível executar o select:");
-            e.printStackTrace();
+                System.err.println("Não foi possível executar o select:");
+                e.printStackTrace();
             }
         } catch (SQLException e) {
             System.err.println("Não foi possível realizar o prepareStatement:");
@@ -57,12 +62,12 @@ public class DbManager {
     public void insertTasks(String description) {
         String sql = "INSERT INTO tasks(description, is_completed) VALUES(?, ?)";
 
-        try(PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, description);
             ps.setBoolean(2, false);
             int linhas = ps.executeUpdate();   // agora grava
             System.out.println("Inseriu " + linhas + " linha(s)");
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             System.err.println("Não foi possível inserir a tarefa:");
             e.printStackTrace();
         }
@@ -93,8 +98,7 @@ public class DbManager {
             e.printStackTrace();
         }
     }
-    
-    
+
     public void deleteTask(int id) {
         String sql = "DELETE FROM tasks WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
