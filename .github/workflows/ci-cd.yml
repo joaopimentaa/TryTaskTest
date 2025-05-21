@@ -1,6 +1,6 @@
 name: CI/CD Java (TryTasks)
 
-# Dispara este workflow em push ou pull_request na branch 'main'
+# Este workflow executa em push ou pull_request na branch 'main'
 on:
   push:
     branches: [ main ]
@@ -13,18 +13,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Fazer checkout do repositório
+      # 1) Checkout do código
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # 2) Configurar o JDK 17 (se usar Java 11, troque '17' por '11')
+      # 2) Configurar o JDK (Java 17)
       - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3) Baixar o JUnit 5 Platform Console Standalone (versão 1.9.2)
+      # 3) Baixar JUnit 5 Platform Console Standalone (versão 1.9.2)
       - name: Baixar JUnit 5 Standalone Jar
         run: |
           JUNIT_URL="https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.2/junit-platform-console-standalone-1.9.2.jar"
@@ -34,29 +34,28 @@ jobs:
       # 4) Compilar o código-fonte (src/main) e as classes de teste (src/test)
       - name: Compilar Projeto e Testes
         run: |
-          # 4.1) Criar pastas de saída para .class
           mkdir -p out/main
           mkdir -p out/test
 
-          # 4.2) Compilar todo o código-fonte (src/main), incluindo todas as libs em lib/*.jar
+          # 4.2) Compilar src/main, incluindo **todas** as libs em lib/*.jar
           javac \
-            -cp "lib/*.jar" \
+            -cp "lib/*" \
             -d out/main \
             $(find src/main -name "*.java")
 
-          # 4.3) Compilar todas as classes de teste (src/test), incluindo:
-          #      - out/main (código compilado)
-          #      - JUnit Standalone (jars/junit-platform…)
+          # 4.3) Compilar src/test, incluindo:
+          #      - out/main (código compilado);
+          #      - JUnit Standalone (jars/junit-platform…);
           #      - todas as libs em lib/*.jar
           javac \
-            -cp "out/main:jars/junit-platform-console-standalone-1.9.2.jar:lib/*.jar" \
+            -cp "out/main:jars/junit-platform-console-standalone-1.9.2.jar:lib/*" \
             -d out/test \
             $(find src/test -name "*.java")
 
-      # 5) Executar todos os testes JUnit 5 que estejam em out/test
+      # 5) Executar todos os testes JUnit 5 que estiverem em out/test
       - name: Executar Testes JUnit 5
         run: |
           java -jar jars/junit-platform-console-standalone-1.9.2.jar \
-            --classpath out/main:out/test:lib/*.jar \
+            --classpath out/main:out/test:lib/* \
             --scan-class-path \
             --reports-dir test-results
