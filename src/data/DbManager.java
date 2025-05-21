@@ -10,7 +10,7 @@ public class DbManager {
     public static void main(String[] args) throws SQLException {
         DbManager dbManager = new DbManager();
 
-        //dbManager.insertTasks("Tarefa teste");
+        // dbManager.insertTasks("Tarefa teste");
         dbManager.selectTasks(false);
         dbManager.selectTasks(true);
         dbManager.close();
@@ -18,9 +18,6 @@ public class DbManager {
 
     public DbManager() {
         try {
-            // 🔽 Força o carregamento do driver PostgreSQL
-            Class.forName("org.postgresql.Driver");
-
             String url = "jdbc:postgresql://aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
                     + "?user=postgres.hpwsyhmalwkmeuqdqcpm"
                     + "&password=FasoftTryTasks"
@@ -28,9 +25,6 @@ public class DbManager {
 
             connection = DriverManager.getConnection(url);
             System.out.println("Conectado ao Supabase!");
-        } catch (ClassNotFoundException e) {
-            System.err.println("Driver PostgreSQL não encontrado:");
-            e.printStackTrace();
         } catch (SQLException e) {
             System.err.println("Erro de conexão:");
             e.printStackTrace();
@@ -46,6 +40,7 @@ public class DbManager {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     tasks.put(rs.getInt(1), rs.getString(2));
+                    // printTasks(rs);
                 }
             } catch (SQLException e) {
                 System.err.println("Não foi possível executar o select:");
@@ -107,6 +102,20 @@ public class DbManager {
             System.out.println("Deletou " + linhas + " linha(s)");
         } catch (SQLException e) {
             System.err.println("Não foi possível deletar a tarefa:");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 🔄 Remove todas as tarefas da tabela. Útil para testes automatizados.
+     */
+    public void deleteAllTasks() {
+        String sql = "DELETE FROM tasks";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            int linhas = ps.executeUpdate();
+            System.out.println("Deletou TODAS as tarefas (" + linhas + " linha(s))");
+        } catch (SQLException e) {
+            System.err.println("Não foi possível limpar a tabela de tarefas:");
             e.printStackTrace();
         }
     }
