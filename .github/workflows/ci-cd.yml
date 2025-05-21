@@ -1,0 +1,61 @@
+name: CI/CD Java (TryTasks)
+
+# Dispara este workflow em push ou pull_request na branch 'main'
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Compilar e Executar Testes
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Fazer checkout do repositório
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      # 2) Configurar o JDK 17 (se usar Java 11, troque '17' por '11')
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 3) Baixar o JUnit 5 Platform Console Standalone (versão 1.9.2)
+      - name: Baixar JUnit 5 Standalone Jar
+        run: |
+          JUNIT_URL="https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.2/junit-platform-console-standalone-1.9.2.jar"
+          mkdir -p jars
+          curl -sSL "$JUNIT_URL" -o jars/junit-platform-console-standalone-1.9.2.jar
+
+      # 4) Compilar o código-fonte (src/main) e as classes de teste (src/test)
+      - name: Compilar Projeto e Testes
+        run: |
+          # 4.1) Criar pastas de saída para .class
+          mkdir -p out/main
+          mkdir -p out/test
+
+          # 4.2) Compilar todo o código-fonte Java (src/main) e gerar .class em out/main
+          javac \
+            -d out/main \
+            $(find src/main -name "*.java")
+
+          # 4.3) Compilar todas as classes de teste (src/test), incluindo:
+          #      - out/main (código compilado)
+          #      - JUnit Standalone (jars/junit-platform…)
+          #      - todos os JARs que estiverem em lib/*.jar
+          javac \
+            -cp "out/main:jars/junit-platform-console-standalone-1.9.2.jar:lib/*.jar" \
+            -d out/test \
+            $(find src/test -name "*.java")
+
+      # 5) Executar todos os testes JUnit 5 que estejam em out/test
+      - name: Executar Testes JUnit 5
+        run: |
+          java -jar jars/junit-platform-console-standalone-1.9.2.jar \
+            --classpath out/main:out/test:lib/*.jar \
+            --scan-class-path \
+            --reports-dir test-results
