@@ -16,13 +16,12 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v3
 
-      # 2) Configura JDK 11
+      # 2) Configura JDK 11 (sem cache de Ant)
       - name: Configurar JDK 11
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '11'
-          cache: 'ant'
 
       # 3) (Opcional) Confirma que a pasta lib/ existe e contém os JARs
       - name: Verificar diretório lib/ e JARs
@@ -53,7 +52,7 @@ jobs:
       # - name: Empacotar JAR final
       #   run: ant jar
 
-      # 7) (Opcional) Publicar artifact ou fazer upload do JAR, caso queira usar em outra ação:
+      # 7) (Opcional) Para publicar o JAR como artifact:
       # - name: Upload do JAR
       #   uses: actions/upload-artifact@v3
       #   with:
