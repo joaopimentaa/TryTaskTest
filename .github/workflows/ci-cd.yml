@@ -1,6 +1,6 @@
 name: CI/CD Java (TryTasks)
 
-# Este workflow executa em push ou pull_request na branch 'main'
+# Roda em push ou pull_request para a branch 'main'
 on:
   push:
     branches: [ main ]
@@ -17,44 +17,54 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # 2) Configurar o JDK (Java 17)
+      # 2) Configurar o JDK (Java 17). Se precisar de Java 11, troque '17' por '11'.
       - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3) Baixar JUnit 5 Platform Console Standalone (versão 1.9.2)
+      # 3) Baixar o JUnit 5 Platform Console Standalone (versão 1.9.2)
       - name: Baixar JUnit 5 Standalone Jar
         run: |
           JUNIT_URL="https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.2/junit-platform-console-standalone-1.9.2.jar"
           mkdir -p jars
           curl -sSL "$JUNIT_URL" -o jars/junit-platform-console-standalone-1.9.2.jar
 
-      # 4) Compilar o código-fonte (src/main) e as classes de teste (src/test)
-      - name: Compilar Projeto e Testes
+      # 4) Compilar TODO o seu código-fonte (exceto testes)
+      - name: Compilar código de produção
         run: |
+          # 4.1) Criar pastas de saída para as classes compiladas
           mkdir -p out/main
-          mkdir -p out/test
 
-          # 4.2) Compilar src/main, incluindo **todas** as libs em lib/*.jar
+          # 4.2) Compilar TODOS os arquivos .java dentro de src/, EXCETO src/test
+          #      -cp "lib/*" adiciona todas as bibliotecas JAR que você colocou na pasta lib/
+          #      -d out/main instrui o javac a gravar as .class em out/main, preservando o pacote
           javac \
             -cp "lib/*" \
             -d out/main \
-            $(find src/main -name "*.java")
+            $(find src -name "*.java" ! -path "src/test/*")
 
-          # 4.3) Compilar src/test, incluindo:
-          #      - out/main (código compilado);
-          #      - JUnit Standalone (jars/junit-platform…);
-          #      - todas as libs em lib/*.jar
+      # 5) Compilar SOMENTE os testes JUnit
+      - name: Compilar testes JUnit
+        run: |
+          mkdir -p out/test
+
+          # 5.1) Compilar cada arquivo .java em src/test
+          #      -cp "out/main:jars/junit-platform-console-standalone-1.9.2.jar:lib/*"
+          #        → inclui as classes de produção (out/main)
+          #        → inclui o JUnit Standalone (para reconhecer @Test)
+          #        → inclui todas as libs em lib/* (por exemplo, driver PostgreSQL)
+          #      -d out/test: grava as .class dos testes em out/test
           javac \
             -cp "out/main:jars/junit-platform-console-standalone-1.9.2.jar:lib/*" \
             -d out/test \
             $(find src/test -name "*.java")
 
-      # 5) Executar todos os testes JUnit 5 que estiverem em out/test
+      # 6) Executar os testes JUnit 5
       - name: Executar Testes JUnit 5
         run: |
+          # O JUnit Platform Console Standalone varre out/test em busca de classes que terminem em *Test
           java -jar jars/junit-platform-console-standalone-1.9.2.jar \
             --classpath out/main:out/test:lib/* \
             --scan-class-path \
