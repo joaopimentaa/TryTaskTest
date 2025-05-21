@@ -24,34 +24,39 @@ jobs:
           java-version: '11'
           cache: 'ant'
 
-      # 3) Cria o diretório lib/ (caso ainda não exista)
-      - name: Criar diretório lib/
-        run: mkdir -p lib
-
-      # 4) Baixa o driver JDBC do PostgreSQL para lib/
-      - name: Baixar driver PostgreSQL JDBC
+      # 3) (OPCIONAL) Verifica se o driver Postgres já existe em lib/
+      - name: Verificar existência do driver PostgreSQL
         run: |
-          wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar -O lib/postgresql-42.7.3.jar
+          if [ -f lib/postgresql-42.7.3.jar ]; then
+            echo "Driver PostgreSQL encontrado em lib/."
+          else
+            echo "ERRO: driver PostgreSQL NÃO encontrado em lib/." >&2
+            exit 1
+          fi
 
-      # 5) Baixa o JUnit Platform Console Standalone para lib/
-      - name: Baixar junit-platform-console-standalone
+      # 4) (OPCIONAL) Verifica se o JUnit Console Standalone já existe em lib/
+      - name: Verificar existência do JUnit Console Standalone
         run: |
-          wget https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.2/junit-platform-console-standalone-1.9.2.jar \
-               -O lib/junit-platform-console-standalone-1.9.2.jar
+          if [ -f lib/junit-platform-console-standalone-1.9.2.jar ]; then
+            echo "JUnit Platform Console Standalone encontrado em lib/."
+          else
+            echo "ERRO: JUnit Platform Console Standalone NÃO encontrado em lib/." >&2
+            exit 1
+          fi
 
-      # 6) Exibe a versão do Ant (já vem instalado no ubuntu-latest)
+      # 5) Exibe a versão do Ant (já vem instalado no ubuntu-latest)
       - name: Verificar versão do Ant
         run: ant -version
 
-      # 7) Executa Ant na target “test” (compila e roda todos os testes)
+      # 6) Executa Ant na target “test” (compila e roda todos os testes)
       - name: Executar Ant → test
         run: ant test
 
-      # 8) (Opcional) Para gerar o JAR final, descomente abaixo:
+      # 7) (OPCIONAL) Para gerar o JAR final, descomente abaixo:
       # - name: Empacotar JAR final
       #   run: ant jar
 
-      # 9) (Opcional) Publicar artifact ou fazer upload do JAR, caso queira usar em outra ação:
+      # 8) (OPCIONAL) Para publicar o JAR como artifact:
       # - name: Upload do JAR
       #   uses: actions/upload-artifact@v3
       #   with:
