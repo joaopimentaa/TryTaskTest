@@ -1,6 +1,6 @@
-name: CI/CD Java (TryTasks)
+# .github/workflows/ci-cd.yml
+name: CI/CD
 
-# Roda em push ou pull_request para a branch 'main'
 on:
   push:
     branches: [ main ]
@@ -9,63 +9,51 @@ on:
 
 jobs:
   build-and-test:
-    name: Compilar e Executar Testes
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Checkout do código
+      # 1) Faz checkout do repositório
       - name: Checkout do código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      # 2) Configurar o JDK (Java 17). Se precisar de Java 11, troque '17' por '11'.
-      - name: Configurar JDK 17
-        uses: actions/setup-java@v4
+      # 2) Configura JDK 11
+      - name: Configurar JDK 11
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
+          cache: 'ant'
 
-      # 3) Baixar o JUnit 5 Platform Console Standalone (versão 1.9.2)
-      - name: Baixar JUnit 5 Standalone Jar
+      # 3) Cria o diretório lib/ (caso ainda não exista)
+      - name: Criar diretório lib/
+        run: mkdir -p lib
+
+      # 4) Baixa o driver JDBC do PostgreSQL para lib/
+      - name: Baixar driver PostgreSQL JDBC
         run: |
-          JUNIT_URL="https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.2/junit-platform-console-standalone-1.9.2.jar"
-          mkdir -p jars
-          curl -sSL "$JUNIT_URL" -o jars/junit-platform-console-standalone-1.9.2.jar
+          wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar -O lib/postgresql-42.7.3.jar
 
-      # 4) Compilar TODO o seu código-fonte (exceto testes)
-      - name: Compilar código de produção
+      # 5) Baixa o JUnit Platform Console Standalone para lib/
+      - name: Baixar junit-platform-console-standalone
         run: |
-          # 4.1) Criar pastas de saída para as classes compiladas
-          mkdir -p out/main
+          wget https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.2/junit-platform-console-standalone-1.9.2.jar \
+               -O lib/junit-platform-console-standalone-1.9.2.jar
 
-          # 4.2) Compilar TODOS os arquivos .java dentro de src/, EXCETO src/test
-          #      -cp "lib/*" adiciona todas as bibliotecas JAR que você colocou na pasta lib/
-          #      -d out/main instrui o javac a gravar as .class em out/main, preservando o pacote
-          javac \
-            -cp "lib/*" \
-            -d out/main \
-            $(find src -name "*.java" ! -path "src/test/*")
+      # 6) Exibe a versão do Ant (já vem instalado no ubuntu-latest)
+      - name: Verificar versão do Ant
+        run: ant -version
 
-      # 5) Compilar SOMENTE os testes JUnit
-      - name: Compilar testes JUnit
-        run: |
-          mkdir -p out/test
+      # 7) Executa Ant na target “test” (compila e roda todos os testes)
+      - name: Executar Ant → test
+        run: ant test
 
-          # 5.1) Compilar cada arquivo .java em src/test
-          #      -cp "out/main:jars/junit-platform-console-standalone-1.9.2.jar:lib/*"
-          #        → inclui as classes de produção (out/main)
-          #        → inclui o JUnit Standalone (para reconhecer @Test)
-          #        → inclui todas as libs em lib/* (por exemplo, driver PostgreSQL)
-          #      -d out/test: grava as .class dos testes em out/test
-          javac \
-            -cp "out/main:jars/junit-platform-console-standalone-1.9.2.jar:lib/*" \
-            -d out/test \
-            $(find src/test -name "*.java")
+      # 8) (Opcional) Para gerar o JAR final, descomente abaixo:
+      # - name: Empacotar JAR final
+      #   run: ant jar
 
-      # 6) Executar os testes JUnit 5
-      - name: Executar Testes JUnit 5
-        run: |
-          # O JUnit Platform Console Standalone varre out/test em busca de classes que terminem em *Test
-          java -jar jars/junit-platform-console-standalone-1.9.2.jar \
-            --classpath out/main:out/test:lib/* \
-            --scan-class-path \
-            --reports-dir test-results
+      # 9) (Opcional) Publicar artifact ou fazer upload do JAR, caso queira usar em outra ação:
+      # - name: Upload do JAR
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: TryTasks-JAR
+      #     path: dist/TryTasks.jar

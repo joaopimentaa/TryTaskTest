@@ -1,73 +1,131 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- You may freely edit this file. See commented blocks below for -->
-<!-- some examples of how to customize the build. -->
-<!-- (If you delete it and reopen the project it will be recreated.) -->
-<!-- By default, only the Clean and Build commands use this build script. -->
-<!-- Commands such as Run, Debug, and Test only use this build script if -->
-<!-- the Compile on Save feature is turned off for the project. -->
-<!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
-<!-- in the project's Project Properties dialog box.-->
-<project name="TryTasks" default="default" basedir=".">
-    <description>Builds, tests, and runs the project TryTasks.</description>
-    <import file="nbproject/build-impl.xml"/>
-    <!--
+<project name="TryTasks" default="test" basedir=".">
+    <!-- ==================================================
+         PROPRIEDADES GERAIS
 
-    There exist several targets which are by default empty and which can be 
-    used for execution of your tasks. These targets are usually executed 
-    before and after some main targets. They are: 
+         src.dir           → código-fonte principal (Java)
+         test.src.dir      → código-fonte de testes
+         build.classes.dir → saída das classes compiladas (produção)
+         build.test.dir    → saída das classes compiladas (testes)
+         lib.dir           → diretório de bibliotecas (JARs)
+         dist.dir          → diretório de distribuição (JAR final)
+         ================================================== -->
+    <property name="src.dir"           location="src/main/java"/>
+    <property name="test.src.dir"      location="src/test/java"/>
+    <property name="build.classes.dir" location="build/classes"/>
+    <property name="build.test.dir"    location="build/test-classes"/>
+    <property name="lib.dir"           location="lib"/>
+    <property name="dist.dir"          location="dist"/>
 
-      -pre-init:                 called before initialization of project properties
-      -post-init:                called after initialization of project properties
-      -pre-compile:              called before javac compilation
-      -post-compile:             called after javac compilation
-      -pre-compile-single:       called before javac compilation of single file
-      -post-compile-single:      called after javac compilation of single file
-      -pre-compile-test:         called before javac compilation of JUnit tests
-      -post-compile-test:        called after javac compilation of JUnit tests
-      -pre-compile-test-single:  called before javac compilation of single JUnit test
-      -post-compile-test-single: called after javac compilation of single JUunit test
-      -pre-jar:                  called before JAR building
-      -post-jar:                 called after JAR building
-      -post-clean:               called after cleaning build products
+    <!-- ==================================================
+         CONFIGURAÇÃO DE CLASSPATH:
+         Inclui TODOS os JARs dentro de lib/ no classpath
+         ================================================== -->
+    <path id="project.class.path">
+        <fileset dir="${lib.dir}">
+            <include name="**/*.jar"/>
+        </fileset>
+    </path>
 
-    (Targets beginning with '-' are not intended to be called on their own.)
+    <!-- ==================================================
+         TARGET “init” → Cria pastas de saída (caso não existam)
+         ================================================== -->
+    <target name="init">
+        <mkdir dir="${build.classes.dir}"/>
+        <mkdir dir="${build.test.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+    </target>
 
-    Example of inserting an obfuscator after compilation could look like this:
+    <!-- ==================================================
+         TARGET “compile” → Compila o código principal
 
-        <target name="-post-compile">
-            <obfuscate>
-                <fileset dir="${build.classes.dir}"/>
-            </obfuscate>
-        </target>
+         - Fonte: src/main/java
+         - Destino: build/classes
+         - Classpath: lib/*.jar (inclui driver Postgres e JUnit, caso estejam em lib/)
+         ================================================== -->
+    <target name="compile" depends="init">
+        <javac srcdir="${src.dir}"
+               destdir="${build.classes.dir}"
+               includeantruntime="false"
+               classpathref="project.class.path"
+               source="11" target="11"/>
+    </target>
 
-    For list of available properties check the imported 
-    nbproject/build-impl.xml file. 
+    <!-- ==================================================
+         TARGET “compile-tests” → Compila o código de testes
 
+         - Fonte: src/test/java
+         - Destino: build/test-classes
+         - Classpath: build/classes + lib/*.jar
+         ================================================== -->
+    <target name="compile-tests" depends="compile">
+        <javac srcdir="${test.src.dir}"
+               destdir="${build.test.dir}"
+               includeantruntime="false">
+            <classpath>
+                <!-- inclui as classes já compiladas do projeto -->
+                <pathelement location="${build.classes.dir}"/>
+                <!-- inclui todos os JARs de lib/ (driver e JUnit) -->
+                <path refid="project.class.path"/>
+            </classpath>
+            <compilerarg line="--release 11"/>
+        </javac>
+    </target>
 
-    Another way to customize the build is by overriding existing main targets.
-    The targets of interest are: 
+    <!-- ==================================================
+         TARGET “test” → Executa os testes JUnit 5 (via Console Standalone)
 
-      -init-macrodef-javac:     defines macro for javac compilation
-      -init-macrodef-junit:     defines macro for junit execution
-      -init-macrodef-debug:     defines macro for class debugging
-      -init-macrodef-java:      defines macro for class execution
-      -do-jar:                  JAR building
-      run:                      execution of project 
-      -javadoc-build:           Javadoc generation
-      test-report:              JUnit report generation
+         Pré-requisitos:
+          1) Você já possui o JAR “postgresql-42.7.3.jar” em lib/.
+          2) Tenha em lib/ também o JAR “junit-platform-console-standalone-1.9.2.jar”.
+         Como funciona:
+          - O Ant chama o JUnit Platform Console, apontando para:
+             • classes “build/classes”
+             • classes de teste “build/test-classes”
+             • TODOS os JARs de lib/ no classpath
+         ================================================== -->
+    <target name="test" depends="compile-tests">
+        <echo message="Executando testes JUnit 5 via Console Standalone..."/>
 
-    An example of overriding the target for project execution could look like this:
+        <!-- Monta a string de classpath: build/classes:build/test-classes:lib/* -->
+        <path id="runtime.test.classpath">
+            <pathelement location="${build.classes.dir}"/>
+            <pathelement location="${build.test.dir}"/>
+            <path refid="project.class.path"/>
+        </path>
 
-        <target name="run" depends="TryTasks-impl.jar">
-            <exec dir="bin" executable="launcher.exe">
-                <arg file="${dist.jar}"/>
-            </exec>
-        </target>
+        <!-- Executa o JUnit Platform Console Standalone -->
+        <java jar="${lib.dir}/junit-platform-console-standalone-1.9.2.jar"
+              fork="true"
+              failonerror="true">
+            <arg line="--class-path ${toString:runtime.test.classpath} --scan-class-path"/>
+        </java>
+    </target>
 
-    Notice that the overridden target depends on the jar target and not only on 
-    the compile target as the regular run target does. Again, for a list of available 
-    properties which you can use, check the target you are overriding in the
-    nbproject/build-impl.xml file. 
+    <!-- ==================================================
+         TARGET “jar” → Empacota o JAR final do aplicativo
 
-    -->
+         - Inclui todas as classes compiladas (build/classes)
+         - Adiciona “Main-Class” no manifesto
+         - Saída: dist/TryTasks.jar
+         ================================================== -->
+    <target name="jar" depends="compile">
+        <echo message="Gerando JAR de distribuição..."/>
+        <jar destfile="${dist.dir}/TryTasks.jar"
+             basedir="${build.classes.dir}">
+            <manifest>
+                <!-- Ajuste para a sua classe principal, se diferente -->
+                <attribute name="Main-Class" value="com.example.trytasks.TryTasks"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- ==================================================
+         TARGET “clean” → Limpa todos os diretórios de build e distribuição
+         ================================================== -->
+    <target name="clean">
+        <delete dir="${build.classes.dir}"/>
+        <delete dir="${build.test.dir}"/>
+        <delete dir="${dist.dir}"/>
+    </target>
 </project>
