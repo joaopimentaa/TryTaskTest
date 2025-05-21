@@ -38,15 +38,16 @@ jobs:
           mkdir -p out/main
           mkdir -p out/test
 
-          # 4.2) Compilar todo o código-fonte Java (src/main) e gerar .class em out/main
+          # 4.2) Compilar todo o código-fonte (src/main), incluindo todas as libs em lib/*.jar
           javac \
+            -cp "lib/*.jar" \
             -d out/main \
             $(find src/main -name "*.java")
 
           # 4.3) Compilar todas as classes de teste (src/test), incluindo:
           #      - out/main (código compilado)
           #      - JUnit Standalone (jars/junit-platform…)
-          #      - todos os JARs que estiverem em lib/*.jar
+          #      - todas as libs em lib/*.jar
           javac \
             -cp "out/main:jars/junit-platform-console-standalone-1.9.2.jar:lib/*.jar" \
             -d out/test \
